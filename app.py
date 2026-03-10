@@ -5,7 +5,7 @@ from docx import Document
 import os
 
 from config import Config
-from database import db, User, Document as DocModel
+from database import db, User, Template, Document as DocModel
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -22,6 +22,94 @@ def load_user(user_id):
 
 with app.app_context():
     db.create_all()
+
+    # Create default users
+    if not User.query.filter_by(username="admin").first():
+        users = [
+            User(username="admin", password=generate_password_hash("admin123"), role="admin"),
+            User(username="faculty", password=generate_password_hash("123"), role="faculty"),
+            User(username="hod", password=generate_password_hash("123"), role="hod"),
+            User(username="dean", password=generate_password_hash("123"), role="dean"),
+            User(username="student", password=generate_password_hash("123"), role="student"),
+        ]
+        db.session.add_all(users)
+        db.session.commit()
+
+    # Create templates if not exists
+    if not Template.query.first():
+        templates = [
+
+            # STUDENT LEVEL
+            Template(name="Bonafide Certificate",
+                     file_path="doc_templates/bonafide_template.docx",
+                     allowed_roles="student,admin"),
+
+            Template(name="NOC Request",
+                     file_path="doc_templates/noc_template.docx",
+                     allowed_roles="student,admin"),
+
+            Template(name="Internship Permission Request",
+                     file_path="doc_templates/internship_request.docx",
+                     allowed_roles="student,admin"),
+
+            Template(name="Leave Application",
+                     file_path="doc_templates/leave_application.docx",
+                     allowed_roles="student,admin"),
+
+            # FACULTY LEVEL
+            Template(name="Recommendation Letter",
+                     file_path="doc_templates/recommendation.docx",
+                     allowed_roles="faculty,hod,admin"),
+
+            Template(name="Internship Approval",
+                     file_path="doc_templates/internship_approval.docx",
+                     allowed_roles="faculty,hod,admin"),
+
+            Template(name="Meeting Minutes",
+                     file_path="doc_templates/meeting_minutes.docx",
+                     allowed_roles="faculty,hod,admin"),
+
+            Template(name="Event Certificate",
+                     file_path="doc_templates/event_certificate.docx",
+                     allowed_roles="faculty,hod,admin"),
+
+            Template(name="Notice Draft",
+                     file_path="doc_templates/notice_draft.docx",
+                     allowed_roles="faculty,hod,admin"),
+
+            # HOD LEVEL
+            Template(name="Official Notice",
+                     file_path="doc_templates/official_notice.docx",
+                     allowed_roles="hod,admin"),
+
+            Template(name="Circular",
+                     file_path="doc_templates/circular.docx",
+                     allowed_roles="hod,dean,admin"),
+
+            Template(name="Department Letter",
+                     file_path="doc_templates/department_letter.docx",
+                     allowed_roles="hod,admin"),
+
+            Template(name="Workload Allocation",
+                     file_path="doc_templates/workload_allocation.docx",
+                     allowed_roles="hod,admin"),
+
+            # DEAN LEVEL
+            Template(name="Policy Letter",
+                     file_path="doc_templates/policy_letter.docx",
+                     allowed_roles="dean,admin"),
+
+            Template(name="Appointment Letter",
+                     file_path="doc_templates/appointment_letter.docx",
+                     allowed_roles="dean,admin"),
+
+            Template(name="Promotion Letter",
+                     file_path="doc_templates/promotion_letter.docx",
+                     allowed_roles="dean,admin"),
+        ]
+
+        db.session.add_all(templates)
+        db.session.commit()
 
     # Create default admin if not exists
     if not User.query.filter_by(username="admin").first():
@@ -57,17 +145,40 @@ def login_post():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    templates = Template.query.all()
+
+    allowed_templates = []
+
+    for template in templates:
+        roles = template.allowed_roles.split(",")
+        if current_user.role in roles:
+            allowed_templates.append(template)
+
     documents = DocModel.query.all()
-    return render_template("dashboard.html", documents=documents)
 
-@app.route("/create_notice")
-@login_required
-def create_notice():
-    return render_template("create_notice.html")
+    return render_template(
+        "dashboard.html",
+        templates=allowed_templates,
+        documents=documents
+    )
 
-@app.route("/generate_notice", methods=["POST"])
+@app.route("/create/<int:template_id>")
 @login_required
-def generate_notice():
+def create_document(template_id):
+    template = Template.query.get_or_404(template_id)
+    roles = template.allowed_roles.split(",")
+
+    if current_user.role not in roles:
+        return "Access Denied"
+
+    return render_template("create_document.html", template=template)
+
+
+@app.route("/generate/<int:template_id>", methods=["POST"])
+@login_required
+def generate_document(template_id):
+
+    template = Template.query.get_or_404(template_id)
 
     title = request.form["title"]
     department = request.form["department"]
@@ -75,7 +186,7 @@ def generate_notice():
     message = request.form["message"]
     authority = request.form["authority"]
 
-    doc = Document(Config.TEMPLATE_PATH)
+    doc = Document(template.file_path)
 
     for p in doc.paragraphs:
         p.text = p.text.replace("{{TITLE}}", title)
@@ -87,6 +198,16 @@ def generate_notice():
     filename = f"{title.replace(' ', '_')}.docx"
     filepath = os.path.join(Config.GENERATED_FOLDER, filename)
     doc.save(filepath)
+
+    new_doc = DocModel(
+        title=title,
+        filename=filename
+    )
+
+    db.session.add(new_doc)
+    db.session.commit()
+
+    return send_file(filepath, as_attachment=True)
 
     # Save to database
     new_doc = DocModel(
