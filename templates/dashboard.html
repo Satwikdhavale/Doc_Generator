@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>University</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/create_notice">Generate Notice</a>
+    <a href="/logout">Logout</a>
+</div>
+
+<div class="main-content">
+
+    <h1>Dashboard</h1>
+
+    <div class="card-container">
+        <div class="card">
+            <h3>Create New Notice</h3>
+            <a href="/create_notice" class="btn">Generate</a>
+        </div>
+    </div>
+
+    <h2>Generated Documents</h2>
+
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Download</th>
+        </tr>
+
+        {% for doc in documents %}
+        <tr>
+            <td>{{ doc.title }}</td>
+            <td>
+                <a href="/generated_docs/{{ doc.filename }}" class="btn">
+                    Download
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</div>
+
+</body>
+</html>

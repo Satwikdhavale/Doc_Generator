@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Notice</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>University</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/create_notice">Generate Notice</a>
+    <a href="/logout">Logout</a>
+</div>
+
+<div class="main-content">
+
+    <h1>Create University Notice</h1>
+
+    <form method="POST" action="/generate_notice" class="form-box">
+
+        <input type="text" name="title" placeholder="Notice Title" required>
+        <input type="text" name="department" placeholder="Department" required>
+        <input type="date" name="date" required>
+
+        <textarea name="message" rows="5" placeholder="Notice Content" required></textarea>
+
+        <input type="text" name="authority" placeholder="Authority Name" required>
+
+        <button type="submit">Generate Document</button>
+
+    </form>
+
+</div>
+
+</body>
+</html>
