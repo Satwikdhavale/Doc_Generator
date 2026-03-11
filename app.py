@@ -174,7 +174,7 @@ def create_document(template_id):
     return render_template("create_document.html", template=template)
 
 
-@app.route("/generate/<int:template_id>", methods=["POST"])
+@app.route("/generate_document/<int:template_id>", methods=["POST"])
 @login_required
 def generate_document(template_id):
 
