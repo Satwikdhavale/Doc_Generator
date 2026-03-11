@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Document</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>University</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/logout">Logout</a>
+</div>
+
+<div class="main-content">
+    <h1>Create {{ template.name }}</h1>
+
+    <form method="POST" action="/generate_document/{{ template.id }}">
+        
+        <label>Title:</label>
+        <input type="text" name="title" required>
+
+        <label>Department:</label>
+        <input type="text" name="department" required>
+
+        <label>Date:</label>
+        <input type="date" name="date" required>
+
+        <label>Message:</label>
+        <textarea name="message" required></textarea>
+
+        <label>Authority:</label>
+        <input type="text" name="authority" required>
+
+        <button type="submit" class="btn">Generate Document</button>
+    </form>
+</div>
+
+</body>
+</html>
