@@ -14,6 +14,10 @@
         <a href="/manage_users">Manage Users</a>
     {% endif %}
 
+    {% if current_user.role == "admin" %}
+        <a href="/admin_dashboard">Statistics</a>
+    {% endif %}
+
     <a href="/logout">Logout</a>
 </div>
 
@@ -37,6 +41,32 @@
             {% endif %}
         {% endfor %}
     </div>
+
+<h2>Search Documents</h2>
+
+<form method="GET" action="/dashboard" class="search-form">
+
+<input type="text" name="title" placeholder="Search by Title">
+
+<input type="text" name="department" placeholder="Department">
+
+<input type="date" name="date">
+
+<select name="role">
+<option value="">Role</option>
+<option value="student">Student</option>
+<option value="faculty">Faculty</option>
+<option value="hod">HOD</option>
+<option value="dean">Dean</option>
+<option value="admin">Admin</option>
+</select>
+
+<input type="text" name="user" placeholder="Created By User">
+
+<button class="btn">Search</button>
+
+</form>
+
 
     <!-- ================= DOCUMENT TABLE ================= -->
     <h2>Requests / Documents</h2>
@@ -114,8 +144,8 @@
             <td>
                 {% if doc.status == "approved" and doc.filename %}
                     <a href="/generated_docs/{{ doc.filename }}" class="btn">
-                        Download
-                    </a>
+                    Download
+                </a>
                 {% else %}
                     Not Available
                 {% endif %}
@@ -128,3 +158,4 @@
 
 </body>
 </html>
+

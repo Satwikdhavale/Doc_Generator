@@ -180,7 +180,7 @@ def login_post():
 
     user = User.query.filter_by(username=username).first()
 
-    if user and check_password_hash(user.password, password):
+    if user and user.active and check_password_hash(user.password, password):
         login_user(user)
         return redirect("/dashboard")
 
@@ -193,6 +193,28 @@ def logout():
     logout_user()
     return redirect("/")
 
+@app.route("/register", methods=["GET","POST"])
+def register():
+
+    if request.method == "POST":
+
+        username = request.form["username"]
+        password = generate_password_hash(request.form["password"])
+        role = request.form["role"]
+
+        user = User(
+            username=username,
+            password=password,
+            role=role
+        )
+
+        db.session.add(user)
+        db.session.commit()
+
+        return redirect("/")
+
+    return render_template("register.html")
+
 
 # ================= DASHBOARD ================= #
 
@@ -200,26 +222,77 @@ def logout():
 @login_required
 def dashboard():
 
-    role = current_user.role
+    query = DocModel.query
 
-    if role == "student":
-        documents = DocModel.query.filter_by(created_by=current_user.username).all()
+    title = request.args.get("title")
+    department = request.args.get("department")
+    date = request.args.get("date")
+    role = request.args.get("role")
+    user = request.args.get("user")
 
-    elif role == "faculty":
-        documents = DocModel.query.filter_by(status="pending_faculty").all()
+    if title:
+        query = query.filter(DocModel.title.contains(title))
 
-    elif role == "hod":
-        documents = DocModel.query.filter_by(status="pending_hod").all()
+    if department:
+        query = query.filter(DocModel.department.contains(department))
 
-    elif role == "dean":
-        documents = DocModel.query.filter_by(status="pending_dean").all()
+    if date:
+        query = query.filter(DocModel.created_at.contains(date))
 
-    elif role == "admin":
-        documents = DocModel.query.all()
+    if role:
+        query = query.join(User, DocModel.created_by == User.username)\
+                 .filter(User.role == role)
+
+    if user:
+        query = query.filter(DocModel.created_by.contains(user))
+
+    documents = query.all()
 
     templates = Template.query.all()
 
-    return render_template("dashboard.html", documents=documents, templates=templates)
+    return render_template(
+        "dashboard.html",
+        documents=documents,
+        templates=templates
+    )
+
+@app.route("/admin_dashboard")
+@login_required
+def admin_dashboard():
+
+    if current_user.role != "admin":
+        return "Access Denied", 403
+
+    total_documents = DocModel.query.count()
+
+    approved_documents = DocModel.query.filter_by(status="approved").count()
+
+    pending_documents = DocModel.query.filter(
+        DocModel.status != "approved",
+        DocModel.status != "rejected"
+    ).count()
+
+    rejected_documents = DocModel.query.filter_by(status="rejected").count()
+
+    total_users = User.query.count()
+
+    students = User.query.filter_by(role="student").count()
+    faculty = User.query.filter_by(role="faculty").count()
+    hod = User.query.filter_by(role="hod").count()
+    dean = User.query.filter_by(role="dean").count()
+
+    return render_template(
+        "admin_dashboard.html",
+        total_documents=total_documents,
+        approved_documents=approved_documents,
+        pending_documents=pending_documents,
+        rejected_documents=rejected_documents,
+        total_users=total_users,
+        students=students,
+        faculty=faculty,
+        hod=hod,
+        dean=dean
+    )
 
 
 # ================= TEMPLATE ACCESS ================= #
@@ -243,15 +316,31 @@ def create_document(template_id):
 @login_required
 def submit_request():
 
+    title = request.form["title"]
+    department = request.form["department"]
+    template_name = request.form["template_name"]
+
+    role = current_user.role
+
+    # Decide first approval level
+    if role == "student":
+        status = "pending_faculty"
+
+    elif role == "faculty":
+        status = "pending_hod"
+
+    elif role == "hod":
+        status = "pending_dean"
+
+    else:
+        status = "approved"
+
     new_doc = DocModel(
-        title=request.form.get("title"),
-        department=request.form.get("department"),
-        content=request.form.get("message"),
-        authority=request.form.get("authority"),
-        date=request.form.get("date"),
-        template_name=request.form.get("template_name"),
+        title=title,
+        template_name=template_name,
+        department=department,
         created_by=current_user.username,
-        status="pending_faculty"
+        status=status
     )
 
     db.session.add(new_doc)
@@ -262,36 +351,36 @@ def submit_request():
 
 # ================= APPROVAL SYSTEM ================= #
 
+from docx import Document as DocxDocument
+
 @app.route("/approve/<int:doc_id>", methods=["POST"])
 @login_required
 def approve_document(doc_id):
 
     doc = DocModel.query.get_or_404(doc_id)
 
-    if current_user.role == "faculty":
-        doc.status = "pending_hod"
+    role = current_user.role
 
-    elif current_user.role == "hod":
-        doc.status = "pending_dean"
-
-    elif current_user.role == "dean":
+    if role == "faculty" and doc.status == "pending_faculty":
         doc.status = "approved"
+
+    elif role == "hod" and doc.status == "pending_hod":
+        doc.status = "approved"
+
+    elif role == "dean" and doc.status == "pending_dean":
+        doc.status = "approved"
+
+    # Generate document if approved
+    if doc.status == "approved":
 
         template = Template.query.filter_by(name=doc.template_name).first()
 
-        docx = DocxDocument(template.file_path)
+        document = DocxDocument(template.file_path)
 
-        for p in docx.paragraphs:
-            p.text = p.text.replace("{{TITLE}}", str(doc.title or ""))
-            p.text = p.text.replace("{{DEPARTMENT}}", str(doc.department or ""))
-            p.text = p.text.replace("{{MESSAGE}}", str(doc.content or ""))
-            p.text = p.text.replace("{{AUTHORITY}}", str(doc.authority or ""))
-            p.text = p.text.replace("{{DATE}}", str(doc.date or ""))
-
-        filename = f"{doc.title.replace(' ', '_')}.docx"
+        filename = doc.title.replace(" ", "_") + ".docx"
         filepath = os.path.join(Config.GENERATED_FOLDER, filename)
 
-        docx.save(filepath)
+        document.save(filepath)
 
         doc.filename = filename
 
@@ -319,10 +408,18 @@ def download_file(filename):
 
     filepath = os.path.join(Config.GENERATED_FOLDER, filename)
 
-    if os.path.exists(filepath):
+    if not os.path.exists(filepath):
+        return "File not found", 404
+
+    doc = DocModel.query.filter_by(filename=filename).first()
+
+    if current_user.role == "admin":
         return send_file(filepath, as_attachment=True)
 
-    return "File not found", 404
+    if doc and doc.created_by == current_user.username:
+        return send_file(filepath, as_attachment=True)
+
+    return "Access Denied", 403
 
 
 # ================= ADMIN ================= #
@@ -356,6 +453,77 @@ def update_role(user_id):
 def preview(doc_id):
     doc = DocModel.query.get_or_404(doc_id)
     return render_template("preview.html", doc=doc)
+
+@app.route("/reset_password/<int:user_id>")
+@login_required
+def reset_password(user_id):
+
+    if current_user.role != "admin":
+        return "Access Denied"
+
+    user = User.query.get_or_404(user_id)
+
+    user.password = generate_password_hash("123456")
+
+    db.session.commit()
+
+    return redirect("/manage_users")
+
+@app.route("/toggle_user/<int:user_id>")
+@login_required
+def toggle_user(user_id):
+
+    if current_user.role != "admin":
+        return "Access Denied"
+
+    user = User.query.get_or_404(user_id)
+
+    user.active = not user.active
+
+    db.session.commit()
+
+    return redirect("/manage_users")
+
+@app.route("/delete_user/<int:user_id>")
+@login_required
+def delete_user(user_id):
+
+    if current_user.role != "admin":
+        return "Access Denied"
+
+    user = User.query.get_or_404(user_id)
+
+    db.session.delete(user)
+
+    db.session.commit()
+
+    return redirect("/manage_users")
+
+@app.route("/create_user", methods=["GET","POST"])
+@login_required
+def create_user():
+
+    if current_user.role != "admin":
+        return "Access Denied"
+
+    if request.method == "POST":
+
+        username = request.form["username"]
+        password = generate_password_hash(request.form["password"])
+        role = request.form["role"]
+
+        new_user = User(
+            username=username,
+            password=password,
+            role=role
+        )
+
+        db.session.add(new_user)
+        db.session.commit()
+
+        return redirect("/manage_users")
+
+    return render_template("create_user.html")
 
 # ================= RUN ================= #
 
