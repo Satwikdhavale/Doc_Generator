@@ -10,9 +10,8 @@ class User(UserMixin, db.Model):
 
     username = db.Column(db.String(100), unique=True)
     password = db.Column(db.String(200))
-
-    role = db.Column(db.String(50))   # student, faculty, hod, dean, admin
-
+    role = db.Column(db.String(50))   
+    email = db.Column(db.String(120), unique=True)
     active = db.Column(db.Boolean, default=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -60,3 +59,7 @@ class AuditLog(db.Model):
     role = db.Column(db.String(50))
     action = db.Column(db.String(200))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+# ---------------- MAIL MODEL ---------------- #
+
+email = db.Column(db.String(120), unique=True)

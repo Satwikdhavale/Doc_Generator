@@ -9,3 +9,9 @@ class Config:
 
     GENERATED_FOLDER = os.path.join(BASE_DIR, "generated_docs")
     TEMPLATE_PATH = os.path.join(BASE_DIR, "doc_templates", "notice_template.docx")
+
+    MAIL_SERVER = "smtp.gmail.com"
+    MAIL_PORT = 465
+    MAIL_USE_SSL = True
+    MAIL_USERNAME = "satwikdhavale1208@gmail.com"
+    MAIL_PASSWORD = "gabeijrjaexloedg"

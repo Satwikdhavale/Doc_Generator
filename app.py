@@ -1,11 +1,14 @@
+from pydoc import doc
 from flask import Flask, render_template, request, redirect, send_file
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from docx import Document as DocxDocument
+from flask_mail import Mail, Message
 import os
 
 from config import Config
 from database import db, User, Template, Document as DocModel
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -42,11 +45,11 @@ with app.app_context():
     # Default Users
     if not User.query.first():
         users = [
-            User(username="admin", password=generate_password_hash("admin123"), role="admin"),
-            User(username="faculty", password=generate_password_hash("123"), role="faculty"),
-            User(username="hod", password=generate_password_hash("123"), role="hod"),
-            User(username="dean", password=generate_password_hash("123"), role="dean"),
-            User(username="student", password=generate_password_hash("123"), role="student"),
+            User(username="admin", password=generate_password_hash("admin123"), role="admin", email="satwikdhavale1208@gmail.com"),
+            User(username="faculty", password=generate_password_hash("123"), role="faculty", email="pritibagal25@gmail.com"),
+            User(username="hod", password=generate_password_hash("123"), role="hod", email="hod@example.com"),
+            User(username="dean", password=generate_password_hash("123"), role="dean", email="dean@example.com"),
+            User(username="student", password=generate_password_hash("123"), role="student", email="dhavalesatwik12@gmail.com"),
         ]
         db.session.add_all(users)
         db.session.commit()
@@ -214,11 +217,13 @@ def register():
         username = request.form["username"]
         password = generate_password_hash(request.form["password"])
         role = request.form["role"]
+        email = request.form["email"]
 
         user = User(
             username=username,
             password=password,
-            role=role
+            role=role,
+            email=email
         )
 
         db.session.add(user)
@@ -359,6 +364,64 @@ def submit_request():
     db.session.add(new_doc)
     db.session.commit()
 
+    if current_user.role == "student":
+
+        faculty_users = User.query.filter_by(role="faculty").all()
+
+        for user in faculty_users:
+            send_email(
+                user.email,
+                "New Request Pending Approval",
+                f"""
+                A new request has been submitted.
+
+                Title: {title}
+                Department: {department}
+
+                Please login to approve/reject.
+         """
+            )
+        
+        hod_users = User.query.filter_by(role="hod").all()
+
+    if current_user.role == "faculty":
+
+        hod_users = User.query.filter_by(role="hod").all()
+
+        for user in hod_users:
+            send_email(
+                user.email,
+                "New Request Pending Approval",
+                f"""
+                A new request has been submitted.
+
+                Title: {title}
+                Department: {department}
+
+                Please login to approve/reject.
+         """
+            )
+
+        dean_users = User.query.filter_by(role="dean").all()
+
+    if current_user.role == "hod":
+
+        dean_users = User.query.filter_by(role="dean").all()
+
+        for user in dean_users:
+            send_email(
+                user.email,
+                "New Request Pending Approval",
+                f"""
+                A new request has been submitted.
+
+                Title: {title}
+                Department: {department}
+
+                Please login to approve/reject.
+         """
+            )
+
     return redirect("/dashboard")
 
 
@@ -413,6 +476,18 @@ def approve_document(doc_id):
 
         print("FILE CREATED:", filepath)
 
+    creator = User.query.filter_by(username=doc.created_by).first()
+
+    send_email(
+        creator.email,
+        "Document Approved ",
+        f"""
+        Your document has been approved.
+
+        Title: {doc.title}
+        """
+    )
+
     db.session.commit()
 
     return redirect("/dashboard")
@@ -424,6 +499,16 @@ def reject_document(doc_id):
     doc = DocModel.query.get_or_404(doc_id)
     doc.status = "rejected"
 
+    creator = User.query.filter_by(username=doc.created_by).first()
+    send_email(
+        creator.email,
+        "Document Rejected",
+        f"""
+        Your document has been rejected.
+
+        Title: {doc.title}
+        """
+    )
     db.session.commit()
     return redirect("/dashboard")
 
@@ -442,6 +527,20 @@ def download_file(filename):
         return send_file(filepath, as_attachment=True)
 
     return "File not found", 404
+
+
+mail = Mail(app)
+def send_email(to, subject, body):
+    try:
+        msg = Message(
+            subject,
+            sender=app.config["MAIL_USERNAME"],
+            recipients=[to]
+        )
+        msg.body = body
+        mail.send(msg)
+    except Exception as e:
+        print("EMAIL ERROR:", e)
 
 
 # ================= ADMIN ================= #
