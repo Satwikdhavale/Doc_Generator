@@ -20,6 +20,19 @@ login_manager.login_view = "login"
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+def replace_text(doc, key, value):
+    for para in doc.paragraphs:
+        for run in para.runs:
+            if key in run.text:
+                run.text = run.text.replace(key, str(value))
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for para in cell.paragraphs:
+                    for run in para.runs:
+                        if key in run.text:
+                            run.text = run.text.replace(key, str(value))
 
 # ================= INITIAL SETUP ================= #
 
@@ -351,8 +364,6 @@ def submit_request():
 
 # ================= APPROVAL SYSTEM ================= #
 
-from docx import Document as DocxDocument
-
 @app.route("/approve/<int:doc_id>", methods=["POST"])
 @login_required
 def approve_document(doc_id):
@@ -370,24 +381,41 @@ def approve_document(doc_id):
     elif role == "dean" and doc.status == "pending_dean":
         doc.status = "approved"
 
-    # Generate document if approved
+    # File generation logic
     if doc.status == "approved":
 
         template = Template.query.filter_by(name=doc.template_name).first()
 
-        document = DocxDocument(template.file_path)
+        if not template:
+            return "Template not found"
 
         filename = doc.title.replace(" ", "_") + ".docx"
         filepath = os.path.join(Config.GENERATED_FOLDER, filename)
+
+        # Create blank doc if template fails
+        try:
+            document = DocxDocument(template.file_path)
+
+            replace_text(document, "{{TITLE}}", doc.title)
+            replace_text(document, "{{DEPARTMENT}}", doc.department)
+            replace_text(document, "{{DATE}}", str(doc.created_at.date()) if doc.created_at else "")
+            replace_text(document, "{{MESSAGE}}", doc.title)
+            replace_text(document, "{{AUTHORITY}}", doc.created_by)
+        except:
+            document = DocxDocument()
+
+        document.add_paragraph(f"Document: {doc.title}")
+        document.add_paragraph(f"Generated for: {doc.created_by}")
 
         document.save(filepath)
 
         doc.filename = filename
 
+        print("FILE CREATED:", filepath)
+
     db.session.commit()
 
     return redirect("/dashboard")
-
 
 @app.route("/reject/<int:doc_id>", methods=["POST"])
 @login_required
@@ -408,18 +436,12 @@ def download_file(filename):
 
     filepath = os.path.join(Config.GENERATED_FOLDER, filename)
 
-    if not os.path.exists(filepath):
-        return "File not found", 404
+    print("DOWNLOAD REQUEST:", filepath)
 
-    doc = DocModel.query.filter_by(filename=filename).first()
-
-    if current_user.role == "admin":
+    if os.path.exists(filepath):
         return send_file(filepath, as_attachment=True)
 
-    if doc and doc.created_by == current_user.username:
-        return send_file(filepath, as_attachment=True)
-
-    return "Access Denied", 403
+    return "File not found", 404
 
 
 # ================= ADMIN ================= #

@@ -11,11 +11,13 @@
     <h2>Document Preview</h2>
 
     <p><strong>Title:</strong> {{ doc.title }}</p>
+    <p><strong>Message:</strong> {{ doc.message }}</p>
     <p><strong>Created By:</strong> {{ doc.created_by }}</p>
     <p><strong>Status:</strong> {{ doc.status }}</p>
     <p><strong>Date:</strong> {{ doc.created_at.strftime('%Y-%m-%d') }}</p>
 
     <a href="/dashboard" class="btn">Back</a>
+    
 
 </div>
 

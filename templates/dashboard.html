@@ -78,7 +78,7 @@
             <th>Date</th>
             <th>Status</th>
             <th>Action</th>
-            <th>Download</th>
+            <th>Download</th
         </tr>
 
         {% for doc in documents %}
@@ -109,6 +109,7 @@
 
                 <!-- PREVIEW BUTTON -->
                 <a href="/preview/{{ doc.id }}" class="btn">Preview</a>
+                
 
                 <!-- APPROVAL BUTTONS -->
                 {% if current_user.role == "faculty" and doc.status == "pending_faculty" %}
