@@ -4,34 +4,65 @@
     <title>Create {{ template.name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
-<div class="main-content">
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <h2>University ERP</h2>
 
-    <h2>Create {{ template.name }}</h2>
+    <a href="/dashboard">Dashboard</a>
 
-    <form method="POST" action="/submit_request">
+    {% if current_user.role == "admin" %}
+    <a href="/manage_users">Manage Users</a>
+    <a href="/admin_dashboard">Analytics</a>
+    {% endif %}
 
-        <input type="hidden" name="template_name" value="{{ template.name }}">
+    <a href="/logout" class="logout">Logout</a>
+</div>
 
-        <label>Title:</label>
-        <input type="text" name="title" required>
+<!-- MAIN -->
+<div class="main">
 
-        <label>Department:</label>
-        <input type="text" name="department" required>
+<!-- HEADER -->
+<div class="header">
+    <div>
+        <h1>Create Document</h1>
+        <p>{{ template.name }}</p>
+    </div>
 
-        <label>Date:</label>
-        <input type="date" name="date" required>
+    <div class="notification">
+        Fill Details
+    </div>
+</div>
 
-        <label>Message:</label>
-        <textarea name="message" rows="4" required></textarea>
+<!-- FORM CARD -->
+<div class="form-card">
 
-        <label>Authority:</label>
-        <input type="text" name="authority" required>
+<form method="POST" action="/submit_request">
 
-        <button class="btn">Submit Request</button>
+<input type="hidden" name="template_name" value="{{ template.name }}">
 
-    </form>
+<label>Title</label>
+<input type="text" name="title" required>
+
+<label>Department</label>
+<input type="text" name="department" required>
+
+<label>Date</label>
+<input type="date" name="date" required>
+
+<label>Message</label>
+<textarea name="message" rows="4" required></textarea>
+
+<label>Authority</label>
+<input type="text" name="authority" required>
+
+<button class="btn">Submit Request</button>
+
+</form>
+
+</div>
 
 </div>
 

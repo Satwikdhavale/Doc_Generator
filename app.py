@@ -10,7 +10,7 @@ from config import Config
 from database import db, User, Template, Document as DocModel
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config.from_object(Config)
 
 db.init_app(app)

@@ -1,74 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Admin Statistics</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Analytics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
 
+<!-- SIDEBAR -->
 <div class="sidebar">
-<h2>Admin Panel</h2>
-<a href="/dashboard">Dashboard</a>
-<a href="/manage_users">Manage Users</a>
-<a href="/logout">Logout</a>
+    <h2>University ERP</h2>
+
+    <a href="/dashboard">Dashboard</a>
+    <a href="/manage_users">Manage Users</a>
+    <a href="/admin_dashboard">Analytics</a>
+
+    <a href="/logout" class="logout">Logout</a>
 </div>
 
-<div class="main-content">
+<!-- MAIN -->
+<div class="main">
 
-<h1>System Statistics</h1>
+<!-- HEADER -->
+<div class="header">
+    <div>
+        <h1>Analytics Dashboard</h1>
+        <p>System Overview</p>
+    </div>
 
-<div class="card-container">
+    <div class="notification">
+        Insights
+    </div>
+</div>
+
+<!-- STATS CARDS -->
+<div class="card-grid">
 
 <div class="card">
-<h3>Total Documents</h3>
-<p>{{ total_documents }}</p>
-</div>
-
-<div class="card">
-<h3>Approved</h3>
-<p>{{ approved_documents }}</p>
-</div>
-
-<div class="card">
-<h3>Pending</h3>
-<p>{{ pending_documents }}</p>
-</div>
-
-<div class="card">
-<h3>Rejected</h3>
-<p>{{ rejected_documents }}</p>
-</div>
-
-</div>
-
-<h2>User Statistics</h2>
-
-<div class="card-container">
-
-<div class="card">
-<h3>Total Users</h3>
-<p>{{ total_users }}</p>
+    <h4>Total Documents</h4>
+    <p class="big">{{ total_documents }}</p>
 </div>
 
 <div class="card">
-<h3>Students</h3>
-<p>{{ students }}</p>
+    <h4>Approved</h4>
+    <p class="big green">{{ approved_documents }}</p>
 </div>
 
 <div class="card">
-<h3>Faculty</h3>
-<p>{{ faculty }}</p>
+    <h4>Pending</h4>
+    <p class="big yellow">{{ pending_documents }}</p>
 </div>
 
 <div class="card">
-<h3>HOD</h3>
-<p>{{ hod }}</p>
+    <h4>Rejected</h4>
+    <p class="big red">{{ rejected_documents }}</p>
 </div>
 
 <div class="card">
-<h3>Dean</h3>
-<p>{{ dean }}</p>
+    <h4>Total Users</h4>
+    <p class="big">{{ total_users }}</p>
+</div>
+
+<div class="card">
+    <h4>Students</h4>
+    <p class="big">{{ students }}</p>
+</div>
+
+<div class="card">
+    <h4>Faculty</h4>
+    <p class="big">{{ faculty }}</p>
+</div>
+
+<div class="card">
+    <h4>HOD</h4>
+    <p class="big">{{ hod }}</p>
+</div>
+
+<div class="card">
+    <h4>Dean</h4>
+    <p class="big">{{ dean }}</p>
 </div>
 
 </div>
@@ -76,4 +86,4 @@
 </div>
 
 </body>
-</html> 
+</html>

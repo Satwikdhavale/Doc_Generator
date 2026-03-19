@@ -1,23 +1,67 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Preview</title>
+    <title>Document Preview</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
-<div class="main-content">
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <h2>University ERP</h2>
 
-    <h2>Document Preview</h2>
+    <a href="/dashboard">Dashboard</a>
 
-    <p><strong>Title:</strong> {{ doc.title }}</p>
-    <p><strong>Message:</strong> {{ doc.message }}</p>
-    <p><strong>Created By:</strong> {{ doc.created_by }}</p>
-    <p><strong>Status:</strong> {{ doc.status }}</p>
-    <p><strong>Date:</strong> {{ doc.created_at.strftime('%Y-%m-%d') }}</p>
+    {% if current_user.role == "admin" %}
+    <a href="/manage_users">Manage Users</a>
+    <a href="/admin_dashboard">Analytics</a>
+    {% endif %}
 
-    <a href="/dashboard" class="btn">Back</a>
-    
+    <a href="/logout" class="logout">Logout</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- HEADER -->
+<div class="header">
+    <div>
+        <h1>Document Preview</h1>
+        <p>{{ doc.template_name }}</p>
+    </div>
+
+    <div class="notification">
+        View Mode
+    </div>
+</div>
+
+<!-- PREVIEW CARD -->
+<div class="preview-card">
+
+<p><strong>Title:</strong> {{ doc.title }}</p>
+
+<p><strong>Message:</strong> {{ doc.message or "—" }}</p>
+
+<p><strong>Created By:</strong> {{ doc.created_by }}</p>
+
+<p><strong>Status:</strong> 
+    {% if doc.status == "approved" %}
+        <span class="green">Approved</span>
+    {% elif doc.status == "rejected" %}
+        <span class="red">Rejected</span>
+    {% else %}
+        <span class="yellow">Pending</span>
+    {% endif %}
+</p>
+
+<p><strong>Date:</strong> {{ doc.created_at.strftime('%Y-%m-%d') }}</p>
+
+<div class="back-btn">
+    <a href="/dashboard" class="btn-small">← Back</a>
+</div>
+
+</div>
 
 </div>
 

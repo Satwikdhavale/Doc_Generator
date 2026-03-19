@@ -4,159 +4,151 @@
     <title>Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
+<!-- SIDEBAR -->
 <div class="sidebar">
-    <h2>University Document Generator</h2>
+    <h2>University ERP</h2>
+
     <a href="/dashboard">Dashboard</a>
 
     {% if current_user.role == "admin" %}
-        <a href="/manage_users">Manage Users</a>
+    <a href="/manage_users">Manage Users</a>
+    <a href="/admin_dashboard">Analytics</a>
     {% endif %}
 
-    {% if current_user.role == "admin" %}
-        <a href="/admin_dashboard">Statistics</a>
-    {% endif %}
-
-    <a href="/logout">Logout</a>
+    <a href="/logout" class="logout">Logout</a>
 </div>
 
-<div class="main-content">
+<!-- MAIN -->
+<div class="main">
 
-    <h1>Welcome {{ current_user.username }}</h1>
-    <h3>Role: {{ current_user.role|capitalize }}</h3>
-
-    <!-- ================= TEMPLATE SECTION ================= -->
-    <h2>Available Templates</h2>
-
-    <div class="card-container">
-        {% for template in templates %}
-            {% if current_user.role in template.allowed_roles.split(",") %}
-                <div class="card">
-                    <h3>{{ template.name }}</h3>
-                    <a href="/create/{{ template.id }}" class="btn">
-                        Open
-                    </a>
-                </div>
-            {% endif %}
-        {% endfor %}
+<!-- HEADER -->
+<div class="header">
+    <div>
+        <h1>Welcome {{ current_user.username }}</h1>
+        <p>{{ current_user.role }}</p>
     </div>
 
-<h2>Search Documents</h2>
+    <div class="notification">
+        Notifications
+    </div>
+</div>
 
-<form method="GET" action="/dashboard" class="search-form">
+<!-- TEMPLATES -->
+<h3 class="section-title">Available Templates</h3>
 
-<input type="text" name="title" placeholder="Search by Title">
+<div class="card-grid">
+{% for template in templates %}
+{% if current_user.role in template.allowed_roles.split(",") %}
 
-<input type="text" name="department" placeholder="Department">
+<div class="card">
+    <h4>{{ template.name }}</h4>
+    <a href="/create/{{ template.id }}">Open →</a>
+</div>
 
-<input type="date" name="date">
+{% endif %}
+{% endfor %}
+</div>
 
-<select name="role">
-<option value="">Role</option>
-<option value="student">Student</option>
-<option value="faculty">Faculty</option>
-<option value="hod">HOD</option>
-<option value="dean">Dean</option>
-<option value="admin">Admin</option>
-</select>
+<!-- SEARCH -->
+<div class="search-box">
+    <input type="text" placeholder="Title">
+    <input type="text" placeholder="Department">
+    <button>Search</button>
+</div>
 
-<input type="text" name="user" placeholder="Created By User">
+<!-- TABLE -->
+<div class="table-box">
 
-<button class="btn">Search</button>
+<table>
+<tr>
+    <th>Title</th>
+    <th>User</th>
+    <th>Date</th>
+    <th>Status</th>
+    <th>Action</th>
+    <th>Download</th>
+</tr>
 
+{% for doc in documents %}
+<tr>
+<td>{{ doc.title }}</td>
+<td>{{ doc.created_by }}</td>
+<td>{{ doc.created_at.strftime('%Y-%m-%d') }}</td>
+
+<td>
+    {% if doc.status == "approved" %}
+        <span class="green">Approved</span>
+    {% elif doc.status == "rejected" %}
+        <span class="red">Rejected</span>
+    {% else %}
+        <span class="yellow">Pending</span>
+    {% endif %}
+</td>
+
+<td>
+
+<!-- Preview always -->
+<a href="/preview/{{ doc.id }}">Preview</a>
+
+<!-- FACULTY -->
+{% if current_user.role == "faculty" and doc.status == "pending_faculty" %}
+
+<form method="POST" action="/approve/{{ doc.id }}" style="display:inline;">
+    <button class="btn-small">Approve</button>
 </form>
 
+<form method="POST" action="/reject/{{ doc.id }}" style="display:inline;">
+    <button class="btn-small red-btn">Reject</button>
+</form>
 
-    <!-- ================= DOCUMENT TABLE ================= -->
-    <h2>Requests / Documents</h2>
+{% endif %}
 
-    <table>
-        <tr>
-            <th>Title</th>
-            <th>Created By</th>
-            <th>Date</th>
-            <th>Status</th>
-            <th>Action</th>
-            <th>Download</th
-        </tr>
+<!-- HOD -->
+{% if current_user.role == "hod" and doc.status == "pending_hod" %}
 
-        {% for doc in documents %}
-        <tr>
-            <td>{{ doc.title }}</td>
-            <td>{{ doc.created_by }}</td>
-            <td>{{ doc.created_at.strftime('%Y-%m-%d') if doc.created_at }}</td>
+<form method="POST" action="/approve/{{ doc.id }}" style="display:inline;">
+    <button class="btn-small">Approve</button>
+</form>
 
-            <!-- STATUS WITH COLOR -->
-            <td>
-                {% if doc.status == "pending_faculty" %}
-                    <span style="color:orange;">Pending Faculty</span>
-                {% elif doc.status == "pending_hod" %}
-                    <span style="color:blue;">Pending HOD</span>
-                {% elif doc.status == "pending_dean" %}
-                    <span style="color:purple;">Pending Dean</span>
-                {% elif doc.status == "approved" %}
-                    <span style="color:green;">Approved</span>
-                {% elif doc.status == "rejected" %}
-                    <span style="color:red;">Rejected</span>
-                {% else %}
-                    {{ doc.status }}
-                {% endif %}
-            </td>
+<form method="POST" action="/reject/{{ doc.id }}" style="display:inline;">
+    <button class="btn-small red-btn">Reject</button>
+</form>
 
-            <!-- ACTION COLUMN -->
-            <td>
+{% endif %}
 
-                <!-- PREVIEW BUTTON -->
-                <a href="/preview/{{ doc.id }}" class="btn">Preview</a>
-                
+<!-- DEAN -->
+{% if current_user.role == "dean" and doc.status == "pending_dean" %}
 
-                <!-- APPROVAL BUTTONS -->
-                {% if current_user.role == "faculty" and doc.status == "pending_faculty" %}
-                    <form method="POST" action="/approve/{{ doc.id }}" style="display:inline;">
-                        <button class="btn">Approve</button>
-                    </form>
+<form method="POST" action="/approve/{{ doc.id }}" style="display:inline;">
+    <button class="btn-small">Final Approve</button>
+</form>
 
-                    <form method="POST" action="/reject/{{ doc.id }}" style="display:inline;">
-                        <button class="btn" style="background:red;">Reject</button>
-                    </form>
+<form method="POST" action="/reject/{{ doc.id }}" style="display:inline;">
+    <button class="btn-small red-btn">Reject</button>
+</form>
 
-                {% elif current_user.role == "hod" and doc.status == "pending_hod" %}
-                    <form method="POST" action="/approve/{{ doc.id }}" style="display:inline;">
-                        <button class="btn">Approve</button>
-                    </form>
+{% endif %}
 
-                    <form method="POST" action="/reject/{{ doc.id }}" style="display:inline;">
-                        <button class="btn" style="background:red;">Reject</button>
-                    </form>
+</td>
 
-                {% elif current_user.role == "dean" and doc.status == "pending_dean" %}
-                    <form method="POST" action="/approve/{{ doc.id }}" style="display:inline;">
-                        <button class="btn">Final Approve</button>
-                    </form>
+<td>
+    {% if doc.status == "approved" %}
+    <a href="/generated_docs/{{ doc.filename }}">Download</a>
+    {% else %}
+    —
+    {% endif %}
+</td>
 
-                    <form method="POST" action="/reject/{{ doc.id }}" style="display:inline;">
-                        <button class="btn" style="background:red;">Reject</button>
-                    </form>
-                {% endif %}
-            </td>
+</tr>
+{% endfor %}
 
-            <!-- DOWNLOAD COLUMN -->
-            <td>
-                {% if doc.status == "approved" and doc.filename %}
-                    <a href="/generated_docs/{{ doc.filename }}" class="btn">
-                    Download
-                </a>
-                {% else %}
-                    Not Available
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+</table>
+</div>
 
 </div>
 
 </body>
 </html>
-
