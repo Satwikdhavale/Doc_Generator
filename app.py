@@ -630,20 +630,20 @@ def download_file(filename):
 
     return "File not found", 404
 
-
+import threading
 mail = Mail(app)
-def send_email(to, subject, body):
-    try:
-        msg = Message(
-            subject,
-            sender=app.config["MAIL_USERNAME"],
-            recipients=[to]
-        )
-        msg.body = body
+def send_email_async(msg):
+    with app.app_context():
         mail.send(msg)
-    except Exception as e:
-        print("EMAIL ERROR:", e)
+def send_email(to, subject, body):
 
+    msg = Message(
+        subject=subject,
+        recipients=[to],
+        body=body
+    )
+    threading.Thread(target=send_email_async, args=(msg,)).start()
+    
 
 # ================= ADMIN ================= #
 

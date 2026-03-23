@@ -12,8 +12,7 @@ class Config:
 
     MAIL_SERVER = "smtp.gmail.com"
     MAIL_PORT = 587
-    MAIL_USE_SSL = False
     MAIL_USE_TLS = True
     MAIL_USERNAME = "satwikdhavale1208@gmail.com"
     MAIL_PASSWORD = "gabeijrjaexloedg"
-    MAIL_DeFAULT_SENDER = "satwikdhavale1208@gmail.com" 
+    MAIL_DEFAULT_SENDER = "satwikdhavale1208@gmail.com" 
