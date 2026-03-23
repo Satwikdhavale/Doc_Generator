@@ -11,8 +11,9 @@ class Config:
     TEMPLATE_PATH = os.path.join(BASE_DIR, "doc_templates", "notice_template.docx")
 
     MAIL_SERVER = "smtp.gmail.com"
-    MAIL_PORT = 465
-    MAIL_USE_SSL = True
+    MAIL_PORT = 587
+    MAIL_USE_SSL = False
+    MAIL_USE_TLS = True
     MAIL_USERNAME = "satwikdhavale1208@gmail.com"
     MAIL_PASSWORD = "gabeijrjaexloedg"
-    MAIL_DeFAULT_SENDER = "satwikdhavale1208@gmail.com"
+    MAIL_DeFAULT_SENDER = "satwikdhavale1208@gmail.com" 
