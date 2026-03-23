@@ -4,6 +4,8 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from docx import Document as DocxDocument
 from flask_mail import Mail, Message
+import random
+from datetime import datetime, timedelta 
 import os
 
 from config import Config
@@ -12,6 +14,8 @@ from database import db, User, Template, Document as DocModel
 
 app = Flask(__name__, static_folder='static')
 app.config.from_object(Config)
+mail=Mail(app)
+app.config["MAIL_DEFAULT_SENDER"] = "satwikdhavale1208@gmail.com"
 
 db.init_app(app)
 
@@ -36,6 +40,17 @@ def replace_text(doc, key, value):
                     for run in para.runs:
                         if key in run.text:
                             run.text = run.text.replace(key, str(value))
+
+def send_otp(email, otp):
+
+    msg = Message(
+        subject="Your OTP Login Code",
+        sender="satwikdhavale1208@gmail.com",  
+        recipients=[email],
+        body=f"Your OTP is: {otp}"
+    )
+
+    mail.send(msg)
 
 # ================= INITIAL SETUP ================= #
 
@@ -191,16 +206,70 @@ def login():
 
 @app.route("/login", methods=["POST"])
 def login_post():
+
     username = request.form["username"]
     password = request.form["password"]
 
     user = User.query.filter_by(username=username).first()
 
-    if user and user.active and check_password_hash(user.password, password):
+    if not user:
+        return render_template("auth_error.html", message="User not found")
+
+    if not user.active:
+        return render_template("auth_error.html", message="Account is deactivated")
+
+    if not check_password_hash(user.password, password):
+        return render_template("auth_error.html", message="Incorrect password")
+
+    login_user(user)
+    return redirect("/dashboard")
+
+@app.route("/otp_login", methods=["GET", "POST"])
+def otp_login():
+
+    if request.method == "POST":
+
+        email = request.form["email"]
+
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            return render_template("auth_error.html", message="User not found")
+
+        # Generate OTP
+        otp = str(random.randint(100000, 999999))
+
+        user.otp = otp
+        user.otp_expiry = datetime.utcnow() + timedelta(minutes=5)
+
+        db.session.commit()
+
+        send_otp(user.email, otp)
+
+        return redirect(f"/verify_otp/{user.id}")
+
+    return render_template("otp_login.html")
+
+@app.route("/verify_otp/<int:user_id>", methods=["GET", "POST"])
+def verify_otp(user_id):
+
+    user = User.query.get_or_404(user_id)
+
+    if request.method == "POST":
+
+        entered_otp = request.form["otp"]
+
+        if user.otp != entered_otp:
+            return "Invalid OTP"
+
+        if datetime.utcnow() > user.otp_expiry:
+            return "OTP Expired"
+
         login_user(user)
+
         return redirect("/dashboard")
 
-    return "Invalid Credentials"
+    return render_template("verify_otp.html")
 
 
 @app.route("/logout")
@@ -209,19 +278,52 @@ def logout():
     logout_user()
     return redirect("/")
 
+import re
+
 @app.route("/register", methods=["GET","POST"])
 def register():
 
     if request.method == "POST":
 
         username = request.form["username"]
-        password = generate_password_hash(request.form["password"])
-        role = request.form["role"]
+        password = request.form["password"]
+        confirm_password = request.form["confirm_password"]
         email = request.form["email"]
+        role = request.form["role"]
+
+        # ===== VALIDATIONS =====
+
+        # Email format
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            flash("Invalid email format", "error")
+            return redirect("/register")
+
+        # Password match
+        if password != confirm_password:
+            flash("Passwords do not match", "error")
+            return redirect("/register")
+
+        # Password strength
+        if len(password) < 6:
+            flash("Password must be at least 6 characters", "error")
+            return redirect("/register")
+
+        # Duplicate email
+        if User.query.filter_by(email=email).first():
+            flash("Email already registered", "error")
+            return redirect("/register")
+
+        # Duplicate username
+        if User.query.filter_by(username=username).first():
+            flash("Username already exists", "error")
+            return redirect("/register")
+
+        # ===== CREATE USER =====
+        hashed_password = generate_password_hash(password)
 
         user = User(
             username=username,
-            password=password,
+            password=hashed_password,
             role=role,
             email=email
         )
@@ -229,10 +331,10 @@ def register():
         db.session.add(user)
         db.session.commit()
 
+        flash("Account created successfully!", "success")
         return redirect("/")
 
     return render_template("register.html")
-
 
 # ================= DASHBOARD ================= #
 

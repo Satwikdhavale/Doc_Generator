@@ -15,3 +15,4 @@ class Config:
     MAIL_USE_SSL = True
     MAIL_USERNAME = "satwikdhavale1208@gmail.com"
     MAIL_PASSWORD = "gabeijrjaexloedg"
+    MAIL_DeFAULT_SENDER = "satwikdhavale1208@gmail.com"

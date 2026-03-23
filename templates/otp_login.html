@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login with OTP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="auth-wrapper">
+
+    <div class="auth-card">
+
+        <h2>Login with OTP</h2>
+
+        <form method="POST">
+
+            <input type="email" name="email" placeholder="Enter Email" required>
+
+            <button type="submit" class="btn-primary">
+                Send OTP
+            </button>
+
+        </form>
+
+        <a href="/" class="auth-link">← Back to Login</a>
+
+    </div>
+
+</div>
+
+</body>
+</html>

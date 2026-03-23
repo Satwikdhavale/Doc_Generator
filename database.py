@@ -13,6 +13,8 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(50))   
     email = db.Column(db.String(120), unique=True)
     active = db.Column(db.Boolean, default=True)
+    otp = db.Column(db.String(6))
+    otp_expiry = db.Column(db.DateTime)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -63,3 +65,6 @@ class AuditLog(db.Model):
 # ---------------- MAIL MODEL ---------------- #
 
 email = db.Column(db.String(120), unique=True)
+email = db.Column(db.String(120), unique=True, nullable=False)
+otp = db.Column(db.String(6))
+otp_expiry = db.Column(db.DateTime)
