@@ -1,3 +1,4 @@
+from flask import render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
@@ -5,18 +6,28 @@ from datetime import datetime
 db = SQLAlchemy()
 
 # ---------------- USER MODEL ---------------- #
-class User(UserMixin, db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
-
-    username = db.Column(db.String(100), unique=True)
+    username = db.Column(db.String(100))
     password = db.Column(db.String(200))
-    role = db.Column(db.String(50))   
+    role = db.Column(db.String(50))
     email = db.Column(db.String(120), unique=True)
-    active = db.Column(db.Boolean, default=True)
+
     otp = db.Column(db.String(6))
+    otp_created_at = db.Column(db.DateTime)
     otp_expiry = db.Column(db.DateTime)
 
+    active = db.Column(db.Boolean, default=True)
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False)
+    message = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def is_active(self):
+        return self.active
 
 
 # ---------------- TEMPLATE MODEL ---------------- #

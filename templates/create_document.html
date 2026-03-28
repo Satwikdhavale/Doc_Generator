@@ -9,7 +9,17 @@
 
 <!-- SIDEBAR -->
 <div class="sidebar">
-    <h2>University ERP</h2>
+    <div class="sidebar-brand">
+
+        <img src="{{ url_for('static', filename='dash_logo.png') }}" class="brand-logo">
+
+        <div class="brand-text">
+            <h2 class="brand-title">MIT Art, Design and Technology</h2>
+            <p class="brand-sub">Pune, Maharashtra</p>
+        </div>
+
+    </div>
+    <nav class="sidebar-menu">
 
     <a href="/dashboard">Dashboard</a>
 
@@ -19,6 +29,7 @@
     {% endif %}
 
     <a href="/logout" class="logout">Logout</a>
+    </nav>
 </div>
 
 <!-- MAIN -->

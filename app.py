@@ -1,5 +1,5 @@
 from pydoc import doc
-from flask import Flask, render_template, request, redirect, send_file
+from flask import Flask, flash, render_template, request, redirect, send_file, session
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from docx import Document as DocxDocument
@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import os
 
 from config import Config
-from database import db, User, Template, Document as DocModel
+from database import Notification, db, User, Template, Document as DocModel
 
 
 app = Flask(__name__, static_folder='static')
@@ -224,6 +224,9 @@ def login_post():
     login_user(user)
     return redirect("/dashboard")
 
+from datetime import datetime
+import random
+
 @app.route("/otp_login", methods=["GET", "POST"])
 def otp_login():
 
@@ -234,43 +237,84 @@ def otp_login():
         user = User.query.filter_by(email=email).first()
 
         if not user:
-            return render_template("auth_error.html", message="User not found")
+            return render_template("otp_login.html", error="User not found")
 
         # Generate OTP
         otp = str(random.randint(100000, 999999))
 
         user.otp = otp
-        user.otp_expiry = datetime.utcnow() + timedelta(minutes=5)
-
+        user.otp_created_at = datetime.utcnow()
         db.session.commit()
 
-        send_otp(user.email, otp)
+        # Save email in session
+        session["otp_email"] = user.email
 
-        return redirect(f"/verify_otp/{user.id}")
+        # Send OTP
+        send_email(user.email, "Your OTP", f"Your OTP is {otp}")
+
+        print("OTP:", otp)
+        
+        return redirect("/enter_otp")
 
     return render_template("otp_login.html")
 
-@app.route("/verify_otp/<int:user_id>", methods=["GET", "POST"])
-def verify_otp(user_id):
+@app.route("/verify_otp", methods=["POST"])
+def verify_otp():
 
-    user = User.query.get_or_404(user_id)
+    email = session.get("otp_email")
 
-    if request.method == "POST":
+    if not email:
+        return "Session expired"
 
-        entered_otp = request.form["otp"]
+    user = User.query.filter_by(email=email).first()
 
-        if user.otp != entered_otp:
-            return "Invalid OTP"
+    entered_otp = request.form["otp"]
 
-        if datetime.utcnow() > user.otp_expiry:
-            return "OTP Expired"
+    if user.otp != entered_otp:
+        return render_template("verify_otp.html", error="Invalid OTP")
 
-        login_user(user)
+    if datetime.utcnow() > user.otp_created_at + timedelta(minutes=2):
+        return render_template("verify_otp.html", error="OTP expired")
 
-        return redirect("/dashboard")
+    login_user(user)
 
+    return redirect("/dashboard")
+
+
+@app.route("/resend_otp")
+def resend_otp():
+
+    email = session.get("otp_email")
+
+    if not email:
+        return "Session expired. Please login again."
+
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        return "User not found"
+
+    # Generate new OTP
+    otp = str(random.randint(100000, 999999))
+
+    user.otp = otp
+    user.otp_created_at = datetime.utcnow()
+    db.session.commit()
+
+    send_email(
+        user.email,
+        "OTP Resent",
+        f"Your new OTP is: {otp}"
+    )
+
+
+    flash("OTP resent. Please enter the new OTP.", "success")
+
+    return redirect("/enter_otp")
+
+@app.route("/enter_otp")
+def enter_otp():
     return render_template("verify_otp.html")
-
 
 @app.route("/logout")
 @login_required
@@ -370,11 +414,53 @@ def dashboard():
 
     templates = Template.query.all()
 
+    notifications = Notification.query.filter_by(user_id=current_user.id).all()
+
     return render_template(
         "dashboard.html",
         documents=documents,
-        templates=templates
+        templates=templates,
+        notifications=notifications
     )
+
+
+@app.route("/profile")
+@login_required
+def profile():
+    notifications = Notification.query.filter_by(user_id=current_user.id).all()
+    return render_template("profile.html", notifications=notifications)
+
+
+@app.route("/change_password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    notifications = Notification.query.filter_by(user_id=current_user.id).all()
+
+    if request.method == "POST":
+        current_password = request.form["current_password"]
+        new_password     = request.form["new_password"]
+        confirm_password = request.form["confirm_password"]
+
+        if not check_password_hash(current_user.password, current_password):
+            flash("Current password is incorrect", "error")
+            return redirect("/change_password")
+
+        if new_password != confirm_password:
+            flash("New passwords do not match", "error")
+            return redirect("/change_password")
+
+        if len(new_password) < 6:
+            flash("Password must be at least 6 characters", "error")
+            return redirect("/change_password")
+
+        current_user.password = generate_password_hash(new_password)
+        db.session.commit()
+
+        flash("Password updated successfully!", "success")
+        return redirect("/profile")
+
+    return render_template("change_password.html", notifications=notifications)
+
 
 @app.route("/admin_dashboard")
 @login_required
@@ -414,6 +500,45 @@ def admin_dashboard():
         dean=dean
     )
 
+
+# ================= Calendar View ================= #
+@app.route("/calendar")
+@login_required
+def calendar():
+    if current_user.role == "admin":
+        docs = DocModel.query.all()
+    else:
+        docs = DocModel.query.filter_by(created_by=current_user.username).all()
+
+    stats = {}
+    for doc in docs:
+        if doc.created_at:
+            date_key = doc.created_at.strftime("%Y-%m-%d")
+            if date_key not in stats:
+                stats[date_key] = {"sent": 0, "approved": 0, "pending": 0, "docs": []}
+
+            stats[date_key]["sent"] += 1
+
+            if doc.status == "approved":
+                stats[date_key]["approved"] += 1
+            elif doc.status != "rejected":
+                stats[date_key]["pending"] += 1
+
+            stats[date_key]["docs"].append({
+                "title": doc.title,
+                "template_name": doc.template_name,
+                "created_by": doc.created_by,
+                "status": doc.status
+            })
+
+    events = [
+        {"date": date, **s}
+        for date, s in stats.items()
+    ]
+
+    notifications = Notification.query.filter_by(user_id=current_user.id).all()
+
+    return render_template("calendar.html", events=events, notifications=notifications)
 
 # ================= TEMPLATE ACCESS ================= #
 

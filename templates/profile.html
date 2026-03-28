@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <img src="{{ url_for('static', filename='dash_logo.png') }}" class="brand-logo">
+        <div class="brand-text">
+            <h2 class="brand-title">MIT Art, Design and Technology</h2>
+            <p class="brand-sub">Pune, Maharashtra</p>
+        </div>
+    </div>
+    <nav class="sidebar-menu">
+        <a href="/dashboard">Dashboard</a>
+        {% if current_user.role == "admin" %}
+        <a href="/manage_users">Manage Users</a>
+        <a href="/admin_dashboard">Analytics</a>
+        {% endif %}
+        <a href="/logout" class="logout">Logout</a>
+    </nav>
+</div>
+
+<!-- HEADER -->
+{% include 'header.html' %}
+
+<!-- MAIN -->
+<div class="main-content">
+    <div class="page-container">
+        <div class="profile-card">
+
+            <!-- Avatar -->
+            <div class="profile-avatar">
+                {{ current_user.username[0]|upper }}
+            </div>
+
+            <h2>{{ current_user.username }}</h2>
+            <span class="role-badge">{{ current_user.role }}</span>
+
+            <hr class="profile-divider">
+
+            <!-- Fields -->
+            <div class="profile-field">
+                <div class="profile-field-icon"></div>
+                <div class="profile-field-label">Username</div>
+                <div class="profile-field-value">{{ current_user.username }}</div>
+            </div>
+
+            <div class="profile-field">
+                <div class="profile-field-icon"></div>
+                <div class="profile-field-label">Email</div>
+                <div class="profile-field-value">{{ current_user.email }}</div>
+            </div>
+
+            <div class="profile-field">
+                <div class="profile-field-icon"></div>
+                <div class="profile-field-label">Role</div>
+                <div class="profile-field-value">{{ current_user.role | capitalize }}</div>
+            </div>
+
+            <div class="profile-field">
+                <div class="profile-field-icon"></div>
+                <div class="profile-field-label">Account Status</div>
+                <div class="profile-field-value" style="color: #16a34a;">Active</div>
+            </div>
+            <!-- Actions -->
+            <div class="profile-actions">
+                <a href="/change_password" class="btn-indigo">Change Password</a>
+                <a href="/dashboard" class="btn-light">← Back to Dashboard</a>
+                <a href="/logout" class="btn-danger-light">Logout</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleNotifications() {
+    document.getElementById("notificationBox").classList.toggle("show");
+}
+function toggleProfile() {
+    document.getElementById("profileMenu").classList.toggle("show");
+}
+</script>
+
+</body>
+</html>

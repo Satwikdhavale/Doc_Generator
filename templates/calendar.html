@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Calendar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <img src="{{ url_for('static', filename='dash_logo.png') }}" class="brand-logo">
+        <div class="brand-text">
+            <h2 class="brand-title">MIT Art, Design and Technology</h2>
+            <p class="brand-sub">Pune, Maharashtra</p>
+        </div>
+    </div>
+    <nav class="sidebar-menu">
+        <a href="/dashboard">Dashboard</a>
+        {% if current_user.role == "admin" %}
+        <a href="/manage_users">Manage Users</a>
+        <a href="/admin_dashboard">Analytics</a>
+        {% endif %}
+        <a href="/logout" class="logout">Logout</a>
+    </nav>
+</div>
+
+<!-- TOP HEADER -->
+<div class="top-header">
+    <div class="header-left">
+        <h1>Welcome {{ current_user.username }}</h1>
+        <p>{{ current_user.role }}</p>
+    </div>
+    <div class="header-right">
+        <a href="/calendar" class="icon-btn">🗓️</a>
+        <div class="notification-wrapper">
+            <button class="icon-btn" onclick="toggleNotifications()">
+                🔔
+                {% if notifications|length > 0 %}
+                <span class="badge">{{ notifications|length }}</span>
+                {% endif %}
+            </button>
+            <div id="notificationBox" class="notification-box">
+                {% for n in notifications %}
+                    <p>{{ n.message }}</p>
+                {% else %}
+                    <p>No notifications</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="profile-wrapper">
+            <button onclick="toggleProfile()" class="profile-btn">
+                {{ current_user.username[0]|upper }}
+            </button>
+            <div id="profileMenu" class="profile-menu">
+                <a href="/profile">Visit Profile</a>
+                <a href="/change_password">Change Password</a>
+                <a href="/logout" class="logout">Logout</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-content">
+    <div class="header">
+        <div>
+            <h1>📅 Calendar</h1>
+            <p>Track your document requests by date</p>
+        </div>
+    </div>
+
+    <div class="calendar-wrapper">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<!-- DAY POPUP MODAL -->
+<div class="modal-overlay" id="dayModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="modalDate">Documents on —</h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+
+        <div class="modal-stats-row">
+            <div class="modal-stat sent">
+                <div class="stat-num" id="modalSent">0</div>
+                <div class="stat-label">Sent</div>
+            </div>
+            <div class="modal-stat approved">
+                <div class="stat-num" id="modalApproved">0</div>
+                <div class="stat-label">Approved</div>
+            </div>
+            <div class="modal-stat pending">
+                <div class="stat-num" id="modalPending">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+        </div>
+
+        <div class="modal-doc-list" id="modalDocList"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script>
+    const rawEvents = {{ events | tojson }};
+
+    function openModal(dateStr) {
+        const match = rawEvents.find(e => e.date === dateStr);
+        if (!match) return;
+
+        // Format date nicely
+        const d = new Date(dateStr + 'T00:00:00');
+        const label = d.toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+        document.getElementById('modalDate').textContent = '📅 ' + label;
+        document.getElementById('modalSent').textContent     = match.sent;
+        document.getElementById('modalApproved').textContent = match.approved;
+        document.getElementById('modalPending').textContent  = match.pending;
+
+        // Build doc list
+        const list = document.getElementById('modalDocList');
+        list.innerHTML = '';
+
+        if (!match.docs || match.docs.length === 0) {
+            list.innerHTML = '<div class="modal-empty">No documents found for this day.</div>';
+        } else {
+            match.docs.forEach(doc => {
+                let statusClass = 'status-pending';
+                let statusLabel = 'Pending';
+                if (doc.status === 'approved')  { statusClass = 'status-approved'; statusLabel = 'Approved'; }
+                if (doc.status === 'rejected')  { statusClass = 'status-rejected'; statusLabel = 'Rejected'; }
+
+                list.innerHTML += `
+                    <div class="modal-doc-item">
+                        <div>
+                            <div class="modal-doc-title">${doc.title}</div>
+                            <div class="modal-doc-meta">${doc.template_name} · ${doc.created_by}</div>
+                        </div>
+                        <span class="modal-doc-status ${statusClass}">${statusLabel}</span>
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById('dayModal').classList.add('show');
+    }
+
+    function closeModal() {
+        document.getElementById('dayModal').classList.remove('show');
+    }
+
+    // Close on overlay click
+    document.getElementById('dayModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const calendarEl = document.getElementById('calendar');
+
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,today,next',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+            },
+            buttonText: {
+                today: 'Today',
+                month: 'Month',
+                week:  'Week',
+                day:   'Day',
+                list:  'Agenda'
+            },
+            height: 'auto',
+            dateClick: function(info) {
+                openModal(info.dateStr);
+            },
+            dayCellDidMount: function(info) {
+                const d = info.date;
+                const dateStr = d.getFullYear() + '-' +
+                        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                        String(d.getDate()).padStart(2, '0');
+                const match = rawEvents.find(e => e.date === dateStr);
+                if (match) {
+                    const frame = info.el.querySelector('.fc-daygrid-day-frame') || info.el;
+                    const div = document.createElement('div');
+                    div.className = 'day-stats';
+                    div.innerHTML = `
+                        <div class="stat-badge badge-sent">
+                            <span class="stat-dot dot-sent"></span> ${match.sent} Sent
+                        </div>
+                        <div class="stat-badge badge-approved">
+                            <span class="stat-dot dot-approved"></span> ${match.approved} Approved
+                        </div>
+                        <div class="stat-badge badge-pending">
+                            <span class="stat-dot dot-pending"></span> ${match.pending} Pending
+                        </div>
+                    `;
+                    frame.appendChild(div);
+                }
+            }
+        });
+
+        calendar.render();
+    });
+
+    function toggleNotifications() {
+        document.getElementById("notificationBox").classList.toggle("show");
+    }
+    function toggleProfile() {
+        document.getElementById("profileMenu").classList.toggle("show");
+    }
+</script>
+
+</body>
+</html>

@@ -1,10 +1,82 @@
-    <div class="login-container">
-    <div class="login-box">
-        <h2>Enter OTP</h2>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enter OTP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
 
-        <form method="POST">
-            <input type="text" name="otp" placeholder="Enter OTP" required>
-            <button type="submit">Verify</button>
+<body class="auth-body">
+
+<div class="auth-container">
+
+    <div class="auth-card">
+
+        <h2 class="auth-title">Enter OTP</h2>
+
+        <p class="auth-subtitle">Enter the code sent to your email</p>
+
+        <form method="POST" action="/verify_otp">
+
+            <input type="text" name="otp" placeholder="Enter OTP" required class="auth-input">
+
+            <button type="submit" class="auth-btn">
+                Verify
+            </button>
+
         </form>
+
+        <div class="otp-footer">
+
+            <p id="timer">02:00</p>
+
+                <button type="button" id="resendBtn" class="resend-btn" disabled>
+                    Resend OTP
+                </button>
+
+        </div>
+
     </div>
+
 </div>
+
+<script>
+let timeLeft = 120; // 2 minutes
+
+const timerElement = document.getElementById("timer");
+const resendBtn = document.getElementById("resendBtn");
+
+function updateTimer() {
+    let minutes = Math.floor(timeLeft / 60);
+    let seconds = timeLeft % 60;
+
+    seconds = seconds < 10 ? "0" + seconds : seconds;
+
+    timerElement.innerText = `${minutes}:${seconds}`;
+
+    if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        resendBtn.disabled = false;
+        resendBtn.innerText = "Resend OTP";
+        resendBtn.style.opacity = "1";
+    }
+
+    timeLeft--;
+}
+
+let timerInterval = setInterval(updateTimer, 1000);
+</script>
+
+<script>
+resendBtn.addEventListener("click", function () {
+    if (!resendBtn.disabled) {
+        window.location.href = "/resend_otp";
+    }
+});
+</script>
+
+{% if error %}
+<div class="alert error">{{ error }}</div>
+{% endif %}
+
+</body>
+</html>

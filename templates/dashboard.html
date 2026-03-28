@@ -7,18 +7,85 @@
 
 <body>
 
+    {% include "header.html" %}
+
 <!-- SIDEBAR -->
 <div class="sidebar">
-    <h2>University ERP</h2>
 
-    <a href="/dashboard">Dashboard</a>
+    <!-- TOP BRAND SECTION -->
+    <div class="sidebar-brand">
 
-    {% if current_user.role == "admin" %}
-    <a href="/manage_users">Manage Users</a>
-    <a href="/admin_dashboard">Analytics</a>
-    {% endif %}
+        <img src="{{ url_for('static', filename='dash_logo.png') }}" class="brand-logo">
 
-    <a href="/logout" class="logout">Logout</a>
+        <div class="brand-text">
+            <h2 class="brand-title">MIT Art, Design and Technology</h2>
+            <p class="brand-sub">Pune, Maharashtra</p>
+        </div>
+
+    </div>
+
+    <!-- MENU -->
+    <nav class="sidebar-menu">
+
+        <a href="/dashboard">Dashboard</a>
+
+        {% if current_user.role == "admin" %}
+        <a href="/manage_users">Manage Users</a>
+        <a href="/admin_dashboard">Analytics</a>
+        {% endif %}
+
+        <a href="/logout" class="logout">Logout</a>
+
+    </nav>
+
+</div>
+
+<!--HEADER-->
+<div class="top-header">
+
+    <div class="header-left">
+        <h1>Welcome {{ current_user.username }}</h1>
+        <p>{{ current_user.role }}</p>
+    </div>
+
+    <div class="header-right">
+
+        <!-- CALENDAR -->
+        <a href="/calendar" class="icon-btn">🗓️</a>
+
+        <!-- NOTIFICATIONS -->
+        <div class="notification-wrapper">
+            <button class="icon-btn" onclick="toggleNotifications()">
+                🔔
+                {% if notifications|length > 0 %}
+                <span class="badge">{{ notifications|length }}</span>
+                {% endif %}
+            </button>
+
+            <div id="notificationBox" class="notification-box">
+                {% for n in notifications %}
+                    <p>{{ n.message }}</p>
+                {% else %}
+                    <p>No notifications</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div class="profile-wrapper">
+            <button onclick="toggleProfile()" class="profile-btn">
+                {{ current_user.username[0]|upper }}
+            </button>
+
+            <div id="profileMenu" class="profile-menu">
+                <a href="/profile">Visit Profile</a>
+                <a href="/change_password">Change Password</a>
+                <a href="/logout" class="logout">Logout</a>
+            </div>
+        </div>
+
+    </div>
+
 </div>
 
 <!-- MAIN -->
@@ -27,8 +94,8 @@
 <!-- HEADER -->
 <div class="header">
     <div>
-        <h1>Welcome {{ current_user.username }}</h1>
-        <p>{{ current_user.role }}</p>
+        <!--<h1>Welcome {{ current_user.username }}</h1>
+        <p>{{ current_user.role }}</p>-->
     </div>
 
     <div class="notification">
@@ -149,6 +216,16 @@
 </div>
 
 </div>
+
+<script>
+function toggleNotifications() {
+    document.getElementById("notificationBox").classList.toggle("show");
+}
+
+function toggleProfile() {
+    document.getElementById("profileMenu").classList.toggle("show");
+}
+</script>
 
 </body>
 </html>

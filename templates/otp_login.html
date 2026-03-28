@@ -12,13 +12,23 @@
 
         <h2>Login with OTP</h2>
 
-        <form method="POST">
+        <form method="POST" action="/otp_login">
 
             <input type="email" name="email" placeholder="Enter Email" required>
 
             <button type="submit" class="btn-primary">
                 Send OTP
             </button>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert {{ category }}">
+                {{ message }}
+                </div>
+                        {% endfor %}
+                    {% endif %}
+            {% endwith %}
 
         </form>
 

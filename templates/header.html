@@ -1,0 +1,45 @@
+<div class="top-header">
+
+    <div class="header-left">
+        <h1>Welcome {{ current_user.username }}</h1>
+    </div>
+
+    <div class="header-right">
+
+        <!-- CALENDAR -->
+        <a href="/calendar" class="icon-btn">🗓️</a>
+
+        <!-- NOTIFICATIONS -->
+        <div class="notification-wrapper">
+            <button class="icon-btn" onclick="toggleNotifications()">
+                🔔
+                {% if notifications|length > 0 %}
+                <span class="badge">{{ notifications|length }}</span>
+                {% endif %}
+            </button>
+
+            <div id="notificationBox" class="notification-box">
+                {% for n in notifications %}
+                    <p>{{ n.message }}</p>
+                {% else %}
+                    <p>No notifications</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div class="profile-wrapper">
+            <button onclick="toggleProfile()" class="profile-btn">
+                {{ current_user.username[0]|upper }}
+            </button>
+
+            <div id="profileMenu" class="profile-menu">
+                <a href="/profile">Visit Profile</a>
+                <a href="/change_password">Change Password</a>
+                <a href="/logout">Logout</a>
+            </div>
+        </div>
+
+    </div>
+
+</div>
